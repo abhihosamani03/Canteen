@@ -1,0 +1,426 @@
+VISVESVARAYA TECHNOLOGICAL UNIVERSITY "JNANA SANGAMA", BELAGAVI - 590 018
+
+
+
+A MINI PROJECT REPORT
+
+on
+"MINI PROJECT TITLE"
+
+Submitted by
+
+Student Name 1                                         4SF23CI001
+
+Student Name 2                                         4SF23CI002
+
+
+In partial fulfilment of the requirements for the IV semester
+
+DATABASE MANAGEMENT SYSTEMS
+
+of
+
+BACHELOR OF ENGINEERING
+
+in
+
+COMPUTER SCIENCE AND ENGINEERING (ARTIFICIAL INTELLIGENCE AND MACHINE LEARNING) Under the Guidance of 
+Mrs. Sangeetha M S
+
+Assistant Professor, Department of CSE(AI&ML)
+
+at
+
+
+
+SAHYADRI
+College of Engineering & Management An Autonomous Institution MANGALURU
+2025-26
+
+
+COMPUTER SCIENCE AND ENGINEERING
+
+(ARTIFICIAL INTELLIGENCE AND MACHINE LEARNING)
+
+
+
+
+CERTIFICATE
+
+
+
+This  is to  certify  that   the  Mini Pro ject entitled  "Mini Pro ject Title" has  been carried out by  Student Name 1 (4SF20CI001),  Student Name 1 (4SF20CI001), the bonafide students of Sahyadri  College of Engineering  & Management in partial  fulfilment of the requirements  for the IV semester Database Management Systems (BAI402G) of Bachelor of  Engineering in  Computer  Science and Engineering(AI&ML) of Visvesvaraya Technological University,  Belagavi during the year 2025-26. It is certified that all corrections/suggestions indicated for Internal Assessment have been incorporated in the report deposited in the departmental library.   The mini project report has been approved as it satisfies the academic requirements in respect of mini project work.
+
+
+     
+
+        ----------                                                     -------------             Mrs. Sangeetha M S                                              Dr. Pushpalatha K 
+     Assistant Professor                                                                    Professor & Head
+Dept.  of CSE(AI&ML), SCEM                                         Dept.  of CSE(AI&ML), SCEM
+
+
+Department of Computer Science and Engineering
+(Artificial Intelligence and Machine Learning)
+
+
+
+DECLARATION
+
+
+
+We hereby declare that the entire work embodied in this Mini Project Report titled "Mini Pro ject Title" has been carried out by us at Sahyadri College of Engineering and Management, Mangaluru under the supervision of Mrs.  Sangeetha M S as the part of the IV semester Database Management Systems (BAI402G) of Bachelor of Engineering in Computer Science and Engineering (AI&ML). This report has not been submitted to this or any other University.
+
+
+
+
+
+Student Name 1 (4SF21CI001) Student Name 2 (4SF21CI002) SCEM, Mangaluru
+
+
+
+
+
+Hadoop is an opens source software project that enables the distributed processing of large data sets across clusters of commodity servers.  It is designed to scale up from a single server to thousands of machines, with a very high degree of fault tolerance.   In this project, Hadoop will be deployed in virtual machine which can be obtained from Kernel-based Virtual Machine (KVM) virtualization infrastructure.  And in this a new MapReduce cloud service model is proposed for data analytics in the cloud.   Existing services require users to select a number of complex cluster and job parameters while simultaneously    forcing   the   cloud   provider   to   use   those   potentially    sub-optimal configurations resulting in poor resource utilization   and higher cost. So avoid this create  different clusters  initial  state,  Instead  of customers  to decide the resources to be used for the jobs, this model leverages MapReduce profiling to automatically select appropriate  cluster   configuration   for  the   job.      In this   project   resource(memory) utilization efficient compare to other existing one.
+
+
+
+
+
+It is with great satisfaction   and euphoria that   we are submitting   the Mini Project Report on "Mini Project Title". We have completed it as a part of the IV semester Database Management System (BAI402G) of Bachelor of Engineering in Computer Science and Engineering (AI&ML) of Visvesvaraya Technological University, Belagavi.
+
+We are profoundly indebted   to our guide, Mrs. Sangeetha M S, Assistant Professor, Department of Computer Science and Engineering (AI&ML) for innumerable acts of timely advice, encouragement and We sincerely express our gratitude.
+
+We express our sincere gratitude to Dr. Pushpalatha K, Professor & Head, Department of CSE(AI&ML) for her invaluable support and guidance.
+
+We sincerely thank Dr.  S. S. Injaganeri, Principal, Sahyadri College of Engineering & Management, who have always been a great source of inspiration.
+
+Finally, yet importantly, we express our heartfelt thanks to our family & friends for their wishes and encouragement throughout the work.
+
+
+
+
+
+Student Name 1(4SF23CI001) Student Name 2(4SF23CI002) IV Sem, B.E., CSE(AI&ML) SCEM, Mangaluru
+
+
+
+
+
+
+Abstracti
+Acknowledgement
+ii
+Table of Contents
+iii
+List  of Figures
+iv
+List  of Tables
+v
+1
+Introduction
+1
+2
+Requirements Specification
+22.1   Hardware  Specification  .  .  .  .  .  .  .  .  .  .  .  .  .  ...............22.2   Software Specification    .  .  .  .  .  .  .  .  .  .  .  .  .  ...............2
+3
+System Design
+33.1   ER Diagram  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  ...............33.2   Assumptions  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  . .  ...............33.3   Mapping From ER Diagram to Schema Diagram..............43.4   Schema Diagram    .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  ...............43.5   Normalization  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  ...............5
+4Implementation64.1   Tables Used  ..................................6
+5Results and Discussion8
+6
+Conclusion and Future work
+9
+References                                                                                                              10
+
+
+
+
+
+3.1   ER Diagram for XYZ System   .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .        3
+
+3.2   Schema Diagram for XYZ System  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .        4
+
+
+
+
+
+4.1   Work Flow .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .        7
+
+4.2   Test cases  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .        7
+
+
+
+
+
+Introduction
+
+
+
+
+
+Information  and  communication  are the  essential  part  of human  life.  The  demand  for the  food, cloth,  etc.  are increasing with respect  to the increasing population,  to which researchers and scientists are trying to find innovative solutions.in India the major source of income is the  agriculture  itself hence its known as "land  of agriculture".  Ever since people learned to grow crops, harvest  them  and sell them  to market,  they have tried  to increase the  profit by seeking information  from others.   But  the  information  gained by farmers over the centuries is not adequate  to grow crops in the varying weather condition, soil fertility, pests and diseases. This has raised the need for the latest information which allows the farmers to deal with these changes smoothly.
+   There  is a huge demand  in the  market  for web services based  on agriculture.   The applications   with  varying  requirements   help  the  agriculturist  to  do  several  jobs  like designs,  decision making,  chemical  analyses,  and  GPS  centred  services etc.   Portable devices  provide  an  appropriate  information   entree  point  and  are  convenient  to  be carried everywhere.
+   
+
+
+
+
+Requirements Specification
+
+
+
+
+
+2.1     Hardware Specification
+
+
+• Processor : Intel(R)  Core(TM)  i3-1005G1 CPU @ 1.20GHz 1.19 GHz
+
+
+• RAM : 8GB
+
+
+• Hard Disk : 1TB
+
+
+• Input  Device : Standard keyboard and Mouse
+
+
+• Output Device : Monitor
+
+
+
+2.2     Software Specification
+
+
+• Database  : MySQL 5.6.17
+
+
+• Markup Language : HTML
+
+
+• Scripting Language:  PHP  5.5.12
+
+
+• IDE :NetBeans 8.0.2
+
+
+
+
+
+System Design
+
+
+
+
+
+3.1     ER Diagram
+
+
+The ER Diagram for ABC systemm  is shown in fig 3.1 Customer  will interact  with the
+
+
+
+Figure 3.1: ER Diagram for XYZ System
+
+
+system through application  server, will assign the job with deadline.  Once job is assigned admin will request for the master slave for information about slave virtual machine details. Then calculate  minimum requirement for execute job. After assign job to master,  it will process  the  job  and  return  the  result.    The  main  functionality,   calculating  minimum nodes, is done by admin.
+
+
+3.2     Assumptions
+
+
+• One employee can work in one project only
+
+
+
+
+• One Project  can have multiple  employees
+
+
+• All employees may not have dependents
+
+
+
+3.3     Mapping From ER Diagram to Schema Diagram
+
+
+Figure 3.2 represent the relational  schema of the proposed system.  The customer will be submitting  job with deadline.  Then admin will request for client information.  According to what  ever information  acquired  calculating  minimum  requirement of resources.After this step do the configuration with number of selected nodes and perform the mapreduce job.
+
+
+3.4     Schema Diagram
+
+
+A data flow diagram(DFD) is a graphical representation of the "flow" of data through  an information system .DFDs can also be for the visualization of data processing.On a DFD, data items flow from an external data source or an internal  data store to an internal  data store or an external  data  sink, via an internal  process.  A DFD provides no information about  the  timing  or ordering  of processes, or about whether  processes will operate  in sequence or in parallel.It  is therefore  quite  different from a flowchart , which shows the flow of control  through  an algorithm,  allowing users to determine  what  operations  will be performed, in what order, and under what circumstances,  but not what kinds of data will be input  to and output from the system,nor where the data  will come from and go to, nor where the data  will be stored.
+
+
+
+Figure 3.2: Schema Diagram for XYZ System
+
+
+
+
+3.5     Normalization
+
+
+
+
+
+
+
+Chapter  4
+
+
+
+
+Implementation
+
+
+
+
+
+Explain modules with psuedocode
+
+Paragraph may be added here
+
+
+
+4.1     Tables Used
+
+Mini Project  Title                                                                                                                                  Chapter 4
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Sl.  No.WorkDuration(in Weeks)1Information  Collection on DFB & VNC12Information  collection on development tools23Integrating DirectFB  & VNC84Cross Compiling & Porting25Building JPEG  libraries26Testing2
+Table 4.1: Work Flow
+
+
+
+TC#
+Description
+Expected Result
+Actual Result
+Status
+TC-1
+Drag
+Drag
+Drag
+Pass
+TC-2
+Drag
+Display
+Node
+Pass
+TC-3
+Select
+Removal
+Selected
+Pass
+Table 4.2: Test cases
+
+
+
+
+
+Results and Disscussion
+
+
+
+
+
+Snapshots  with explanation
+
+
+
+
+
+Conclusion and Future work
+
+
+
+
+
+Add your conclusion here
+
+
+
+
+
+[1] Database systems Models, Languages, Design and Application Programming,  Ramez
+
+Elmasri and Shamkant B. Navathe,  7th Edition,  Pearson.
+
+
+[2] Database   management  systems,  Ramakrishnan,  and  Gehrke,  3rd  Edition,   2014, McGraw Hill.
+
+[3] Silberschatz  Korth  and Sudharshan:   Database  System Concepts,  6th Edition,  Mc- Graw Hill, 2013.
+
+[4] Coronel,    Morris,    and   Rob,    Database    Principles    Fundamentals   of   Design, Implementation and Management,  Cengage Learning 2012.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

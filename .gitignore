@@ -1,0 +1,22 @@
+﻿# Compiled Java class files
+*.class
+bin/
+src/*.class
+
+# Package Files / Large Backups
+*.zip
+*.rar
+*.7z
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.iml
+.settings/
+.project
+.classpath
+
+# OS generated files
+Thumbs.db
+Desktop.ini
+.DS_Store

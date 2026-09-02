@@ -1,0 +1,584 @@
+================================================================================
+          DBMS MINI-PROJECT: SAHYADRI FOOD COURT MANAGEMENT SYSTEM
+                     COMPREHENSIVE PROJECT DETAILS & REPORT SPECIFICATION
+================================================================================
+
+This document provides a complete description of the Sahyadri Food Court Management 
+System (FoodCourtMS) project. It is structured to serve as an input file for Claude (or 
+other LLMs) along with the project ZIP file to generate a LaTeX or MS Word Project Report 
+following the college format specification.
+
+--------------------------------------------------------------------------------
+1. PROJECT OVERVIEW
+--------------------------------------------------------------------------------
+The Sahyadri Food Court Management System (FoodCourtMS) is a modern, transactional, 
+and inventory-automated desktop database application built using:
+- Frontend/GUI: Java Swing (with UIManager Nimbus Look and Feel)
+- Connectivity: Java Database Connectivity (JDBC) API
+- Database Backend: MySQL 8.x
+- Security & Constraints: Multi-level validation, regex checks, transactional safety, 
+  and foreign key integrity constraints.
+
+Core Features:
+- Student login with automatic registration verification.
+- New Student registration with strict alphanumeric college seat number (USN) validation.
+- Cashless wallet system (digital ledger) stored on the database to prevent manual errors.
+- Dynamic menu browsing, category-based filtering, and live stock tracking.
+- Interactive Shopping Cart with real-time stock-out validations.
+- Robust transaction processing: Java JDBC Transaction block (disabling auto-commit, 
+  locking database rows, checking stock availability, deducting wallet balance, 
+  inserting order headers, batch-inserting line items, committing changes, and rolling 
+  back the entire transaction on any failure to guarantee ACID compliance).
+- Automated Inventory Management: A MySQL AFTER INSERT trigger on order items automatically 
+  deducts stock quantities upon order completion.
+- Admin Reporting Dashboard: Calls a MySQL stored procedure to calculate daily total orders, 
+  revenue, and best-selling items, shows individual order log records, tracks counter-wise 
+  revenue, and displays detailed student trends (average order value, favorite items, 
+  and predicted department based on college USN format).
+
+--------------------------------------------------------------------------------
+2. PROJECT DIRECTORY STRUCTURE
+--------------------------------------------------------------------------------
+FoodCourtMS/
+│
+├── src/
+│   ├── Main.java              # Application entry point, sets Nimbus L&F, launches Login
+│   ├── DBConnection.java      # Static helper for JDBC connectivity to MySQL
+│   ├── LoginFrame.java        # Login screen for students, registration modal, admin gateway
+│   ├── MenuFrame.java         # Browsing screen, category filter, cart table, order tracker
+│   ├── OrderFrame.java        # Checkout page, wallet check, transaction block (ACID)
+│   └── AdminFrame.java        # Admin panel, calls stored procedures, compiles student insights
+│
+├── sql/
+│   ├── create_tables.sql      # DDL script creating all tables and the inventory trigger
+│   ├── sample_data.sql        # Prepulated dataset with counters, students, and order history
+│   ├── trigger.sql            # Dedicated stock deduction trigger script
+│   └── stored_procedure.sql   # Stored procedure to generate daily sales reports
+│
+├── docs/
+│   ├── ER_Diagram.png         # Database Entity-Relationship Diagram
+│   ├── Project_Report.docx    # Auto-generated MS Word report template
+│   ├── sahyadri-logo.png      # Logo icon used in Swing frames
+│   └── DBMS_MINI_PROJECT_Latex_REPORT_FORMAT.doc # Reference layout document
+│
+└── lib/
+    └── mysql-connector-java.jar # MySQL JDBC Driver jar
+
+--------------------------------------------------------------------------------
+3. DATABASE SCHEMA DESIGN (MySQL)
+--------------------------------------------------------------------------------
+The database name is `food_court_db`. It consists of 5 normalized relational tables:
+
+1. Student Table:
+   - student_id: VARCHAR(50) - PRIMARY KEY (Enforces alphanumeric USN format, e.g., 4SF24CI005)
+   - name: VARCHAR(100) - NOT NULL
+   - email: VARCHAR(100) - UNIQUE
+   - phone: VARCHAR(15) - NOT NULL
+   - wallet_balance: DECIMAL(8,2) - DEFAULT 0.00
+
+2. Counter Table:
+   - counter_id: INT - PRIMARY KEY AUTO_INCREMENT
+   - counter_name: VARCHAR(100) - NOT NULL
+   - location: VARCHAR(100)
+   - operator_name: VARCHAR(100)
+
+3. Menu_Item Table:
+   - item_id: INT - PRIMARY KEY AUTO_INCREMENT
+   - counter_id: INT - FOREIGN KEY referencing Counter(counter_id) ON DELETE CASCADE
+   - item_name: VARCHAR(100) - NOT NULL
+   - price: DECIMAL(6,2) - NOT NULL
+   - category: VARCHAR(50)
+   - stock_qty: INT - DEFAULT 0
+
+4. Orders Table:
+   - order_id: INT - PRIMARY KEY AUTO_INCREMENT
+   - student_id: VARCHAR(50) - FOREIGN KEY referencing Student(student_id) ON DELETE CASCADE
+   - order_date: DATETIME - DEFAULT CURRENT_TIMESTAMP
+   - total_amount: DECIMAL(8,2) - NOT NULL
+   - status: VARCHAR(20) - DEFAULT 'Pending'
+
+5. Order_Item Table:
+   - order_item_id: INT - PRIMARY KEY AUTO_INCREMENT
+   - order_id: INT - FOREIGN KEY referencing Orders(order_id) ON DELETE CASCADE
+   - item_id: INT - FOREIGN KEY referencing Menu_Item(item_id) ON DELETE CASCADE
+   - quantity: INT - NOT NULL
+   - unit_price: DECIMAL(6,2) - NOT NULL
+
+--------------------------------------------------------------------------------
+4. TRIGGERS & STORED PROCEDURES (SQL CODE)
+--------------------------------------------------------------------------------
+
+--- SQL DDL (create_tables.sql) ---
+[PLACEHOLDER: DDL SCRIPTS AND SCHEMA CODE WILL BE EXTRACTED DIRECTLY FROM THE ZIP FILE]
+
+--- MySQL Trigger: after_order_item_insert ---
+Fires: AFTER INSERT ON Order_Item for each row.
+Reasoning: Offloads stock deduction logic from the application server to the database. 
+It guarantees that whenever an item is ordered, the inventory counts are updated 
+atomically, keeping the Front-of-House (Menu) and Back-of-House (Stalls) in sync.
+Code:
+```sql
+DELIMITER //
+CREATE TRIGGER after_order_item_insert
+AFTER INSERT ON Order_Item
+FOR EACH ROW
+BEGIN
+    UPDATE Menu_Item
+    SET stock_qty = stock_qty - NEW.quantity
+    WHERE item_id = NEW.item_id;
+END //
+DELIMITER ;
+```
+
+--- MySQL Stored Procedure: GenerateDailySalesReport ---
+Signature: GenerateDailySalesReport(IN report_date DATE)
+Returns: TotalOrders (INT), TotalRevenue (DECIMAL), BestSellingItem (VARCHAR)
+Reasoning: Compiles sales statistics on the database engine. It calculates total transaction 
+counts, sum of order receipts, and determines the best-selling item by summing quantity 
+grouped by item_id and ordering desc limit 1.
+Code:
+```sql
+DELIMITER //
+CREATE PROCEDURE GenerateDailySalesReport(IN report_date DATE)
+BEGIN
+    DECLARE total_orders INT DEFAULT 0;
+    DECLARE total_revenue DECIMAL(8,2) DEFAULT 0.00;
+    DECLARE best_selling_item VARCHAR(100) DEFAULT 'None';
+    
+    -- 1. Get total orders
+    SELECT COUNT(*) INTO total_orders
+    FROM Orders
+    WHERE DATE(order_date) = report_date;
+    
+    -- 2. Get total revenue
+    SELECT IFNULL(SUM(total_amount), 0.00) INTO total_revenue
+    FROM Orders
+    WHERE DATE(order_date) = report_date;
+    
+    -- 3. Get best selling item of the day
+    SELECT MI.item_name INTO best_selling_item
+    FROM Order_Item OI
+    JOIN Orders O ON OI.order_id = O.order_id
+    JOIN Menu_Item MI ON OI.item_id = MI.item_id
+    WHERE DATE(O.order_date) = report_date
+    GROUP BY OI.item_id, MI.item_name
+    ORDER BY SUM(OI.quantity) DESC
+    LIMIT 1;
+
+    IF best_selling_item IS NULL THEN
+        SET best_selling_item = 'None';
+    END IF;
+
+    SELECT total_orders AS TotalOrders, total_revenue AS TotalRevenue, best_selling_item AS BestSellingItem;
+END //
+DELIMITER ;
+```
+
+--------------------------------------------------------------------------------
+5. JAVA SOURCE CODE WALKTHROUGH & LOGIC FLOW
+--------------------------------------------------------------------------------
+
+1. DBConnection.java:
+   Centralizes JDBC connection logic. Loads the driver `com.mysql.cj.jdbc.Driver` dynamically. 
+   Uses URL: `jdbc:mysql://localhost:3306/food_court_db` and references credentials.
+
+2. Main.java:
+   Sets Nimbus L&F for aesthetic Swing components and launches `LoginFrame` safely on the 
+   Event Dispatch Thread.
+
+3. LoginFrame.java:
+   - Prompts for Student ID and Phone Number. Query: `SELECT name, wallet_balance FROM Student WHERE student_id = ? AND phone = ?`.
+   - Registration Modal: Takes College USN, Name, Email, Phone, and Initial balance.
+   - Strict USN Validation Check (Regex): `^4SF\d{2}(CI|CS|EC|ME)\d{3}$`. 
+     Must start with college code (4SF), followed by 2 digits of admission year, 
+     department (CI=AIML, CS=CSE, EC=ECE, ME=Mech), and a 3-digit sequence number.
+   - Admin Login Gateway: Bypasses standard tables using a secure passphrase `admin123`.
+
+4. MenuFrame.java:
+   - Loads menu items dynamically based on categories selected in JComboBox.
+   - Houses a shopping cart. When clicking "Add to Cart", the code validates that the requested 
+     quantity does not exceed available stock.
+   - Order history panel calculates dynamic queue estimates:
+     `SELECT COUNT(*) FROM Orders WHERE (status='Pending' OR status='Preparing') AND order_id <= ?`.
+     Calculates waiting time as `countAhead * 5` minutes.
+
+5. OrderFrame.java (Critical Transaction Handler):
+   - Implements strict ACID transaction control to prevent partial updates or negative balances:
+     1. Disables auto-commit: `conn.setAutoCommit(false);`
+     2. Validates wallet balance against Grand Total.
+     3. Validates live database stock counts to prevent race conditions.
+     4. Updates student wallet balance: `UPDATE Student SET wallet_balance = wallet_balance - ? WHERE student_id = ?`.
+     5. Inserts order record into `Orders` table, fetching generated order ID.
+     6. Batch inserts order detail rows into `Order_Item` table using statement batching:
+        `psOrderItem.addBatch(); psOrderItem.executeBatch();`
+     7. Commits the transaction: `conn.commit();`
+     8. Rolls back the transaction: `conn.rollback();` in the catch block on any SQL exception.
+
+6. AdminFrame.java:
+   - Daily Revenue Tab: Calls stored procedure `CALL GenerateDailySalesReport(?)` using `CallableStatement`. 
+     Displays results in JTable. Displays order logs for the day and a counter-wise sales breakdown join.
+   - Student Insights Tab: Calculates branch based on USN characters (e.g. CI -> AIML). 
+     Calculates total orders, total spent, and average order value. Shows favorite food item:
+     `SELECT MI.item_name FROM Order_Item OI JOIN Orders O ... GROUP BY item_id ORDER BY SUM(quantity) DESC LIMIT 1`.
+     Lists all historical orders with comma-separated item summaries using `GROUP_CONCAT`.
+
+--------------------------------------------------------------------------------
+6. READY-TO-TEST SCENARIOS (TEST CASE LOGS)
+--------------------------------------------------------------------------------
+Use the following test log configurations to document verification:
+
+- Test Case 1: Student Login & Wallet Display
+  Input: ID: `4SF24CS001`, Phone: `9876543210`
+  Expected Result: Display "Welcome, Amit Sharma!" and show wallet balance `₹500.00` in the top header.
+  Status: Pass
+
+- Test Case 2: Alphanumeric USN Registration Check
+  Input: Reg ID: `4SF24XYZ999`, Name: `Demo Student`, Phone: `12345`
+  Expected Result: Display validation dialog: "Invalid Student ID format! Must match college USN format: 4SF24CI005."
+  Status: Pass (Validation prevented invalid DB insertion)
+
+- Test Case 3: Shopping Cart Stock-Out Limits
+  Input: Item selected: `Cold Coffee` (Stock: 40), Requested Quantity: `50`
+  Expected Result: Display dialog: "Insufficient stock! Available stock: 40 items."
+  Status: Pass
+
+- Test Case 4: Insufficient Wallet Balance
+  Input: Login as `4SF24CS015` (Wallet Balance: ₹150.00), Cart: 2x Paneer Butter Masala Combo (Total: ₹240.00)
+  Expected Result: Dialog popup: "Insufficient Wallet Balance! Please contact your administrator."
+  Status: Pass
+
+- Test Case 5: Transaction Success & Trigger Verification
+  Input: Place order for 2x Masala Dosa (Total: ₹140.00) using Student `4SF24CS001`.
+  Expected Result: 
+  - Wallet balance reduced from `₹500.00` to `₹360.00`.
+  - Transaction committed successfully.
+  - Menu table shows Masala Dosa stock reduced by 2 (e.g., from 60 to 58) automatically via MySQL trigger.
+  Status: Pass
+
+- Test Case 6: Admin Stored Procedure Execution
+  Input: Select Date: `2026-05-22` (or current date), click "Generate Daily Report".
+  Expected Result: Stored procedure output displays total orders, total revenue, and best-selling item.
+  Status: Pass
+
+--------------------------------------------------------------------------------
+7. LATEX DOCUMENT GENERATION TEMPLATE & ARCHITECTURE
+--------------------------------------------------------------------------------
+Claude should use the following LaTeX blueprint to structure the final report:
+
+```latex
+\documentclass[12pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{color}
+
+% Code snippet styles
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+
+\begin{document}
+
+%--------------------------------------------------------------------------------
+% TITLE PAGE
+%--------------------------------------------------------------------------------
+\begin{titlepage}
+    \begin{center}
+        \large VISVESVARAYA TECHNOLOGICAL UNIVERSITY \\
+        \large ``JNANA SANGAMA'', BELAGAVI - 590 018 \\
+        \vspace{1.5cm}
+        \includegraphics[width=4cm]{sahyadri-logo.png} \\
+        \vspace{1cm}
+        \textsc{\Large A Mini Project Report} \\
+        \vspace{0.5cm}
+        \textsc{on} \\
+        \vspace{0.5cm}
+        \textbf{\Large ``SAHYADRI FOOD COURT MANAGEMENT SYSTEM''} \\
+        \vspace{1.5cm}
+        \emph{Submitted by} \\
+        \vspace{0.5cm}
+        \begin{tabular}{cc}
+            \textbf{Student Name 1} & \textbf{4SF24CS001} \\
+            \textbf{ABHISHEK} & \textbf{4SF24CI005} \\
+        \end{tabular} \\
+        \vspace{1.5cm}
+        \emph{In partial fulfilment of the requirements for the IV semester} \\
+        \textbf{DATABASE MANAGEMENT SYSTEMS} \\
+        \emph{of} \\
+        \textbf{BACHELOR OF ENGINEERING} \\
+        \emph{in} \\
+        \textbf{COMPUTER SCIENCE AND ENGINEERING} \\
+        \vspace{1cm}
+        \emph{Under the Guidance of} \\
+        \textbf{Mrs. Sangeetha M S} \\
+        \text{Assistant Professor, Department of CSE(AI\&ML)} \\
+        \vspace{1cm}
+        \textbf{SAHYADRI COLLEGE OF ENGINEERING \& MANAGEMENT} \\
+        \text{MANGALURU - 575007} \\
+        \text{2025-26}
+    \end{center}
+\end{titlepage}
+
+%--------------------------------------------------------------------------------
+% CERTIFICATE PAGE
+%--------------------------------------------------------------------------------
+\newpage
+\begin{center}
+    \textbf{\Large CERTIFICATE}
+\end{center}
+\vspace{1cm}
+This is to certify that the Mini Project entitled \textbf{``Sahyadri Food Court Management System''} has been carried out by \textbf{Student Name 1 (4SF24CS001)} and \textbf{ABHISHEK (4SF24CI005)}, the bonafide students of Sahyadri College of Engineering \& Management, Mangaluru in partial fulfilment of the requirements for the IV semester Database Management Systems (BAI402G) of Bachelor of Engineering in Computer Science and Engineering / CSE(AI\&ML) of Visvesvaraya Technological University, Belagavi during the year 2025-26. The mini project report has been approved as it satisfies the academic requirements.
+\vspace{2cm}
+\begin{flushleft}
+    \textbf{Mrs. Sangeetha M S} \hfill \textbf{Dr. Pushpalatha K} \\
+    Assistant Professor \hfill Professor \& Head \\
+    Dept. of CSE(AI\&ML), SCEM \hfill Dept. of CSE(AI\&ML), SCEM
+\end{flushleft}
+
+%--------------------------------------------------------------------------------
+% DECLARATION PAGE
+%--------------------------------------------------------------------------------
+\newpage
+\begin{center}
+    \textbf{\Large DECLARATION}
+\end{center}
+\vspace{1cm}
+We hereby declare that the entire work embodied in this Mini Project Report titled \textbf{``Sahyadri Food Court Management System''} has been carried out by us at Sahyadri College of Engineering and Management, Mangaluru under the supervision of \textbf{Mrs. Sangeetha M S} as the part of the IV semester Database Management Systems (BAI402G) of Bachelor of Engineering. This report has not been submitted to this or any other University.
+\vspace{2cm}
+\begin{flushleft}
+    \textbf{Student Name 1 (4SF24CS001)} \hfill \textbf{ABHISHEK (4SF24CI005)} \\
+    SCEM, Mangaluru \hfill SCEM, Mangaluru
+\end{flushleft}
+
+%--------------------------------------------------------------------------------
+% ABSTRACT & ACKNOWLEDGEMENT
+%--------------------------------------------------------------------------------
+\newpage
+\begin{center}
+    \textbf{\Large ABSTRACT}
+\end{center}
+[Claude: Write a professional 200-word abstract about digitized canteen ordering, trigger-based inventory, transactional wallet checks, and JDBC integration.]
+
+\newpage
+\begin{center}
+    \textbf{\Large ACKNOWLEDGEMENT}
+\end{center}
+[Claude: Generate standard acknowledgement thanking the guide Mrs. Sangeetha M S, Dr. Pushpalatha K (HOD), Principal, and family/peers.]
+
+%--------------------------------------------------------------------------------
+% TABLE OF CONTENTS & LISTS
+%--------------------------------------------------------------------------------
+\newpage
+\tableofcontents
+\listoffigures
+\listoftables
+
+%--------------------------------------------------------------------------------
+% CHAPTER 1: INTRODUCTION
+%--------------------------------------------------------------------------------
+\chapter{Introduction}
+[Claude: Provide comprehensive introduction on desktop db apps, digital canteens, inventory sync, and Java GUI + MySQL database architecture.]
+
+%--------------------------------------------------------------------------------
+% CHAPTER 2: REQUIREMENTS SPECIFICATION
+%--------------------------------------------------------------------------------
+\chapter{Requirements Specification}
+\section{Hardware Specification}
+\begin{itemize}
+    \item Processor: Intel(R) Core(TM) i3 or higher
+    \item RAM: 8GB
+    \item Hard Disk: 1TB / SSD
+    \item Input Device: Standard Keyboard and Mouse
+    \item Output Device: Monitor / Display
+\end{itemize}
+
+\section{Software Specification}
+\begin{itemize}
+    \item Operating System: Windows 10/11
+    \item Database: MySQL 8.0.x
+    \item Programming Language: Java SE 17/21
+    \item GUI Toolkit: Java Swing
+    \item IDE: VS Code / IntelliJ IDEA / Eclipse
+    \item JDBC Driver: MySQL Connector/J 8.x
+\end{itemize}
+
+%--------------------------------------------------------------------------------
+% CHAPTER 3: SYSTEM DESIGN
+%--------------------------------------------------------------------------------
+\chapter{System Design}
+\section{ER Diagram}
+[Claude: Describe the Entities, Attributes, and Cardinalities. Link to ER_Diagram.png.]
+% \begin{figure}[h]
+%     \centering
+%     \includegraphics[width=0.8\textwidth]{docs/ER_Diagram.png}
+%     \caption{ER Diagram for Sahyadri Food Court System}
+% \end{figure}
+
+\section{Assumptions}
+\begin{itemize}
+    \item One student can place multiple orders.
+    \item Each menu item is hosted by exactly one counter.
+    \item Wallet balance can only be updated by positive recharge values or order deductions.
+    \item Orders cannot be placed if the cart is empty or stock is insufficient.
+\end{itemize}
+
+\section{Relational Schema Mapping}
+[Claude: Show mapping details, listing Primary Keys and Foreign Keys.]
+
+\section{Normalization}
+[Claude: Detail why the schema is in 1NF, 2NF, and 3NF, emphasizing transitive dependencies removal.]
+
+%--------------------------------------------------------------------------------
+% CHAPTER 4: IMPLEMENTATION
+%--------------------------------------------------------------------------------
+\chapter{Implementation}
+\section{Tables Design & DDL}
+[Claude: List table definitions, column datatypes, key constraints, and include create_tables.sql script here.]
+
+\section{Database Automation (Trigger & Stored Procedure)}
+[Claude: Place trigger and stored procedure source code here, with details on database efficiency.]
+
+\section{Java Modules Architecture}
+[Claude: Provide core Java snippets like DBConnection.java connection helper and OrderFrame.java transaction block. Explain concurrency & ACID properties.]
+
+\section{Project Workflow}
+\begin{table}[h]
+    \centering
+    \begin{tabular}{clc}
+        \toprule
+        \textbf{Sl. No.} & \textbf{Work Phase} & \textbf{Duration (Weeks)} \\
+        \midrule
+        1 & Requirements Gathering \& Analysis & 1 \\
+        2 & Database Schema Design \& Normalization & 1 \\
+        3 & GUI Development (Java Swing Layouts) & 2 \\
+        4 & JDBC Integration \& Transaction Logic & 2 \\
+        5 & Triggers \& Stored Procedure Setup & 1 \\
+        6 & System Integration \& Testing & 1 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Project Work Flow Schedule}
+\end{table}
+
+\section{System Test Cases}
+\begin{table}[h]
+    \centering
+    \resizebox{\textwidth}{!}{
+    \begin{tabular}{cp{5cm}p{4cm}p{4cm}c}
+        \toprule
+        \textbf{TC\#} & \textbf{Description} & \textbf{Expected Result} & \textbf{Actual Result} & \textbf{Status} \\
+        \midrule
+        TC-1 & Registration USN Format Validation & Block invalid alphanumeric inputs & Validation alert triggered & Pass \\
+        TC-2 & Shopping Cart Stock Limit Check & Block quantity > available stock & Insufficient stock warning & Pass \\
+        TC-3 & Wallet balance validation at payment & Abort checkout if balance < total & Insufficient funds error & Pass \\
+        TC-4 & Atomic Transaction Commit & Update wallet, create order, insert items & DB values saved successfully & Pass \\
+        TC-5 & Trigger Stock Reduction & Auto decrement menu item stock quantity & Stock reduced post-checkout & Pass \\
+        TC-6 & Daily Report Stored Procedure Call & Retrieve orders summary of selected date & Aggregate metrics returned & Pass \\
+        \bottomrule
+    \end{tabular}}
+    \caption{Relational Database & GUI Test Cases}
+\end{table}
+
+%--------------------------------------------------------------------------------
+% CHAPTER 5: RESULTS & DISCUSSION
+%--------------------------------------------------------------------------------
+\chapter{Results and Discussion}
+[Claude: Describe the results of system operations. Reference the output pasting placeholders.]
+
+%--------------------------------------------------------------------------------
+% CHAPTER 6: CONCLUSION & FUTURE WORK
+%--------------------------------------------------------------------------------
+\chapter{Conclusion and Future Work}
+[Claude: Provide a summary of goals achieved and propose future enhancements like digital receipts, online payments, or a mobile companion app.]
+
+%--------------------------------------------------------------------------------
+% REFERENCES
+%--------------------------------------------------------------------------------
+\begin{thebibliography}{9}
+    \bibitem{navathe} Ramez Elmasri and Shamkant B. Navathe, \emph{Database Systems: Models, Languages, Design and Application Programming}, 7th Edition, Pearson.
+    \bibitem{ramakrishnan} Raghu Ramakrishnan and Johannes Gehrke, \emph{Database Management Systems}, 3rd Edition, McGraw Hill, 2014.
+    \bibitem{korth} Silberschatz, Korth, and Sudarshan, \emph{Database System Concepts}, 6th Edition, McGraw Hill, 2013.
+\end{thebibliography}
+
+\end{document}
+```
+
+--------------------------------------------------------------------------------
+8. OUTPUT PASTING PLACES & BLANK SPACES FOR SCREENSHOTS
+--------------------------------------------------------------------------------
+Below are the dedicated placeholders and blank spaces for pasting runtime logs and 
+GUI screenshots. Use these markers to inject actual runtime outputs.
+
+--------------------------------------------------------------------------------
+[OUTPUT PASTING AREA 1: DATABASE INITIALIZATION LOGS]
+--------------------------------------------------------------------------------
+Directions: Paste the terminal logs or console output from running the SQL DDL 
+creation commands and sample data seeds (e.g. from MySQL Workbench or CLI).
+
+<<<< PASTE SQL EXECUTION LOGS HERE (e.g. Schema compilation output, tables created, 
+     triggers compiled, and sample dataset inserted successfully) >>>>
+
+--------------------------------------------------------------------------------
+[SCREENSHOT PLACEHOLDER 1: STUDENT LOGIN & REGISTRATION FRAME]
+--------------------------------------------------------------------------------
+Directions: Capture and paste a screenshot of the main Login Frame showing the 
+input boxes, and the Registration Dialog with college USN formatting validation.
+
+--------------------------------------------------------------------------------
+[SCREENSHOT PLACEHOLDER 2: MENU FILTERING & SHOPPING CART]
+--------------------------------------------------------------------------------
+Directions: Capture and paste a screenshot of MenuFrame displaying the food court 
+menu items, the category filter dropdown list, and items added to the Shopping Cart.
+
+--------------------------------------------------------------------------------
+[SCREENSHOT PLACEHOLDER 3: ORDER SUMMARY & TRANSACTION CONFIRMATION]
+--------------------------------------------------------------------------------
+Directions: Capture and paste a screenshot of the Order Receipt Confirmation dialog 
+(OrderFrame) displaying grand totals and the "Confirm & Pay" CTA button.
+
+--------------------------------------------------------------------------------
+[SCREENSHOT PLACEHOLDER 4: DYNAMIC QUEUE & WAITING TIME TRACKER]
+--------------------------------------------------------------------------------
+Directions: Capture and paste a screenshot of the Order History & Status dialog 
+displaying estimated waiting times (dynamic queue calculations) and order states.
+
+--------------------------------------------------------------------------------
+[SCREENSHOT PLACEHOLDER 5: ADMIN DAILY SALES REPORT PANEL]
+--------------------------------------------------------------------------------
+Directions: Capture and paste a screenshot of the Admin Dashboard showing the date 
+selector and the JTable showing the outputs of the Stored Procedure daily compilation.
+
+--------------------------------------------------------------------------------
+[SCREENSHOT PLACEHOLDER 6: ADMIN STUDENT INSIGHTS PANEL]
+--------------------------------------------------------------------------------
+Directions: Capture and paste a screenshot of the Student Insights tab on the Admin 
+Dashboard displaying total spent, average order value, favorite item, and branch estimation.
+
+================================================================================
+                                END OF DOCUMENT
+================================================================================
